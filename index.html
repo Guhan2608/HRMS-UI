@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AutoTest AI — Command Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0a0c0f;
+      --surface:     #111418;
+      --surface2:    #181c22;
+      --border:      #232830;
+      --border-glow: #2e7fff33;
+      --accent:      #2e7fff;
+      --accent-dim:  #1a4a99;
+      --accent-glow: #2e7fff22;
+      --success:     #00d68f;
+      --danger:      #ff4d6a;
+      --danger-dim:  #ff4d6a18;
+      --warn:        #ffaa2e;
+      --text:        #e4e8f0;
+      --text-muted:  #5a6478;
+      --text-dim:    #8a95a8;
+      --user-bg:     #1a2a4a;
+      --user-border: #2e4a88;
+      --bot-bg:      #13171e;
+      --bot-border:  #232830;
+      --mono:        'JetBrains Mono', monospace;
+      --display:     'Syne', sans-serif;
+      --radius:      14px;
+      --radius-sm:   8px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.3;
+      pointer-events: none; z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; top: -20vh; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 400px;
+      background: radial-gradient(ellipse, #2e7fff18 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    #app {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      width: 100%; max-width: 860px; height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #111418f5 0%, #111418cc 100%);
+      backdrop-filter: blur(12px); flex-shrink: 0;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1a4acc 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 18px #2e7fff44;
+    }
+    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .logo-text { font-family: var(--display); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+    .logo-text span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; color: var(--text-dim);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px; letter-spacing: 0.04em;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 2.4s infinite; }
+    .ai-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--accent);
+      background: var(--accent-glow); border: 1px solid var(--border-glow);
+      border-radius: 20px; padding: 5px 12px; letter-spacing: 0.04em;
+    }
+    .ai-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Chat area ── */
+    #chat-area {
+      flex: 1; overflow-y: auto;
+      padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 20px;
+      scroll-behavior: smooth;
+    }
+    #chat-area::-webkit-scrollbar { width: 4px; }
+    #chat-area::-webkit-scrollbar-track { background: transparent; }
+    #chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Welcome ── */
+    #welcome {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      flex: 1; gap: 16px; text-align: center; padding: 40px 20px;
+    }
+    #welcome.hidden { display: none; }
+    .welcome-icon {
+      width: 64px; height: 64px; border-radius: 16px;
+      background: linear-gradient(135deg, var(--accent) 0%, #1a4acc 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 40px #2e7fff55; margin-bottom: 8px;
+    }
+    .welcome-icon svg { width: 34px; height: 34px; fill: #fff; }
+    #welcome h2 { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+    #welcome p { color: var(--text-dim); font-size: 13px; max-width: 440px; line-height: 1.7; }
+
+    .welcome-modes { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+    .mode-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 18px;
+      font-size: 12px; text-align: left; max-width: 200px;
+    }
+    .mode-card .mode-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .mode-card.hrms .mode-label { color: var(--success); }
+    .mode-card.ai   .mode-label { color: var(--accent); }
+    .mode-card.wip  .mode-label { color: var(--warn); }
+    .mode-card .mode-desc { color: var(--text-dim); line-height: 1.5; }
+
+    .suggestions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 4px; }
+    .suggestion-chip {
+      font-family: var(--mono); font-size: 12px;
+      padding: 8px 16px; border: 1px solid var(--border);
+      border-radius: 20px; background: var(--surface2);
+      color: var(--text-dim); cursor: pointer; transition: all 0.2s ease;
+    }
+    .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+    /* ── Messages ── */
+    .msg-row {
+      display: flex; flex-direction: column; gap: 4px;
+      animation: slideIn 0.25s ease forwards; opacity: 0; transform: translateY(8px);
+    }
+    @keyframes slideIn { to { opacity:1; transform:translateY(0); } }
+    .msg-row.user { align-items: flex-end; }
+    .msg-row.bot  { align-items: flex-start; }
+
+    .msg-meta { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-muted); letter-spacing: 0.04em; padding: 0 4px; }
+    .msg-row.user .msg-meta { flex-direction: row-reverse; }
+
+    .avatar { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+    .avatar.user-av { background: var(--accent-dim); color: #fff; }
+    .avatar.bot-av  { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
+
+    .bubble { max-width: 78%; padding: 13px 18px; border-radius: var(--radius); font-size: 13px; line-height: 1.65; word-break: break-word; }
+    .bubble.user-bubble { background: var(--user-bg); border: 1px solid var(--user-border); border-bottom-right-radius: 4px; color: var(--text); }
+    .bubble.bot-bubble  { background: var(--bot-bg);  border: 1px solid var(--bot-border);  border-bottom-left-radius: 4px;  color: var(--text); }
+
+    /* HRMS result card */
+    .result-card { margin-top: 10px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+    .result-header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+    .result-header.success { background: #00d68f14; color: var(--success); border-bottom: 1px solid #00d68f22; }
+    .result-header.failed  { background: var(--danger-dim); color: var(--danger); border-bottom: 1px solid #ff4d6a22; }
+    .result-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .result-header.success .result-status-dot { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .result-header.failed  .result-status-dot { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+    .result-body { padding: 12px 14px; background: var(--surface2); }
+    .result-message { font-size: 13px; line-height: 1.6; color: var(--text); }
+    .result-details { margin-top: 8px; font-size: 11.5px; color: var(--text-dim); line-height: 1.6; padding: 8px 10px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); white-space: pre-wrap; }
+    .result-screenshot { margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    .result-screenshot img { width: 100%; display: block; max-height: 300px; object-fit: contain; background: #000; }
+    .screenshot-label { font-size: 10px; color: var(--text-muted); text-align: center; padding: 5px; background: var(--surface2); letter-spacing: 0.04em; }
+
+    /* AI response */
+    .ai-source-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; color: var(--accent);
+      background: var(--accent-glow); border: 1px solid var(--border-glow);
+      border-radius: 10px; padding: 2px 8px; margin-bottom: 8px; letter-spacing: 0.04em;
+    }
+    .ai-response { font-size: 13px; line-height: 1.75; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+    /* Working on it */
+    .wip-card { margin-top: 10px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid #ffaa2e22; }
+    .wip-header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #ffaa2e12; color: var(--warn); border-bottom: 1px solid #ffaa2e22; }
+    .wip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 6px var(--warn); flex-shrink: 0; }
+    .wip-body { padding: 12px 14px; background: var(--surface2); font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+    .wip-body strong { color: var(--text); }
+
+    /* Typing indicator */
+    #typing-indicator { display: none; align-items: flex-start; gap: 10px; padding: 4px 0; }
+    #typing-indicator.visible { display: flex; }
+    .typing-bubble { background: var(--bot-bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; border-radius: var(--radius); padding: 12px 18px; display: flex; align-items: center; gap: 5px; }
+    .typing-label { font-size: 11px; color: var(--text-muted); margin-right: 6px; letter-spacing: 0.04em; }
+    .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: typingBounce 1.2s infinite ease-in-out; }
+    .typing-dot:nth-child(3) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(4) { animation-delay: 0.4s; }
+    @keyframes typingBounce { 0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-5px);opacity:1} }
+
+    /* Input bar */
+    #input-area { flex-shrink: 0; padding: 16px 24px 20px; border-top: 1px solid var(--border); background: linear-gradient(0deg, #0a0c0ff5 0%, #0a0c0fcc 100%); backdrop-filter: blur(12px); }
+    .input-wrapper { display: flex; align-items: flex-end; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px 6px 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--border-glow), 0 0 20px var(--accent-glow); }
+    #user-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--mono); font-size: 13.5px; line-height: 1.6; resize: none; min-height: 24px; max-height: 140px; padding: 6px 0; overflow-y: auto; }
+    #user-input::placeholder { color: var(--text-muted); }
+    #user-input::-webkit-scrollbar { width: 3px; }
+    #user-input::-webkit-scrollbar-thumb { background: var(--border); }
+    #send-btn { width: 38px; height: 38px; flex-shrink: 0; border-radius: var(--radius-sm); background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 12px #2e7fff44; }
+    #send-btn:hover:not(:disabled) { background: #4a90ff; box-shadow: 0 4px 20px #2e7fff66; transform: translateY(-1px); }
+    #send-btn:active:not(:disabled) { transform: translateY(0); }
+    #send-btn:disabled { background: var(--surface2); box-shadow: none; cursor: not-allowed; }
+    #send-btn svg { width: 17px; height: 17px; fill: #fff; transition: opacity 0.2s; }
+    #send-btn:disabled svg { opacity: 0.3; }
+    .input-hint { font-size: 10.5px; color: var(--text-muted); text-align: center; margin-top: 10px; letter-spacing: 0.02em; }
+    .input-hint kbd { font-family: var(--mono); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <span class="logo-text">Auto<span>Test</span> AI</span>
+    </div>
+    <div class="header-right">
+      <div class="ai-badge"><div class="ai-dot"></div> AI POWERED</div>
+      <div class="status-badge"><div class="status-dot"></div> ENGINE ONLINE</div>
+    </div>
+  </header>
+
+  <div id="chat-area">
+    <div id="welcome">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <h2>Automation Command Console</h2>
+      <p>Type any command. HRMS login runs on the real engine — everything else gets an intelligent AI response or a friendly heads-up.</p>
+
+      <div class="welcome-modes">
+        <div class="mode-card hrms">
+          <div class="mode-label">✦ HRMS Live</div>
+          <div class="mode-desc">"Login to HRMS" — real automation engine</div>
+        </div>
+        <div class="mode-card ai">
+          <div class="mode-label">✦ Claude AI</div>
+          <div class="mode-desc">Any other command — smart AI response</div>
+        </div>
+        <div class="mode-card wip">
+          <div class="mode-label">✦ Fallback</div>
+          <div class="mode-desc">If AI is unavailable — "We're working on it"</div>
+        </div>
+      </div>
+
+      <div class="suggestions">
+        <div class="suggestion-chip" onclick="fillInput('Login to HRMS')">Login to HRMS</div>
+        <div class="suggestion-chip" onclick="fillInput('Apply leave tomorrow')">Apply leave tomorrow</div>
+        <div class="suggestion-chip" onclick="fillInput('Check my attendance this week')">Check attendance</div>
+        <div class="suggestion-chip" onclick="fillInput('Submit timesheet for today')">Submit timesheet</div>
+        <div class="suggestion-chip" onclick="fillInput('What can this system do?')">What can this do?</div>
+      </div>
+    </div>
+
+    <div id="typing-indicator">
+      <div class="avatar bot-av">AI</div>
+      <div class="typing-bubble">
+        <span class="typing-label" id="typing-label">Executing</span>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div class="input-wrapper">
+      <textarea id="user-input" rows="1" placeholder='Try "Login to HRMS" or ask anything…' autocomplete="off" spellcheck="false"></textarea>
+      <button id="send-btn" onclick="sendMessage()" title="Send (Enter)">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <p class="input-hint">Press <kbd>Enter</kbd> to send &middot; <kbd>Shift+Enter</kbd> for new line</p>
+  </div>
+
+</div>
+
+<script>
+  /* ════════════════════════════════════════
+     CONFIG — edit these for production
+  ════════════════════════════════════════ */
+  const HRMS_ENDPOINT = '/execute';   // Your HRMS backend URL
+  const USE_HRMS_MOCK = true;         // true = mock HRMS, false = real API call
+
+  /* ════════════════════════════════════════
+     DOM REFS
+  ════════════════════════════════════════ */
+  const chatArea  = document.getElementById('chat-area');
+  const inputEl   = document.getElementById('user-input');
+  const sendBtn   = document.getElementById('send-btn');
+  const welcome   = document.getElementById('welcome');
+  const typingInd = document.getElementById('typing-indicator');
+  const typingLbl = document.getElementById('typing-label');
+
+  /* ════════════════════════════════════════
+     TEXTAREA AUTO-RESIZE + KEYBOARD
+  ════════════════════════════════════════ */
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+  });
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function fillInput(text) {
+    inputEl.value = text;
+    inputEl.dispatchEvent(new Event('input'));
+    inputEl.focus();
+  }
+
+  /* ════════════════════════════════════════
+     HELPERS
+  ════════════════════════════════════════ */
+  const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  /* Detect HRMS login command */
+  function isHrmsCommand(text) {
+    const l = text.toLowerCase();
+    return l.includes('login to hrms') || l.includes('login hrms') || l === 'hrms login';
+  }
+
+  /* ════════════════════════════════════════
+     TYPING INDICATOR
+  ════════════════════════════════════════ */
+  function showTyping(label = 'Thinking') {
+    typingLbl.textContent = label;
+    typingInd.classList.add('visible');
+    scrollBottom();
+  }
+  function hideTyping() { typingInd.classList.remove('visible'); }
+
+  function scrollBottom() {
+    chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+  }
+
+  /* ════════════════════════════════════════
+     APPEND HELPERS
+  ════════════════════════════════════════ */
+  function appendUser(text) {
+    welcome.classList.add('hidden');
+    const row = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = `
+      <div class="msg-meta">
+        <div class="avatar user-av">U</div>
+        <span>${now()}</span>
+      </div>
+      <div class="bubble user-bubble">${escapeHtml(text)}</div>`;
+    chatArea.insertBefore(row, typingInd);
+    scrollBottom();
+  }
+
+  function appendHrmsResult(data) {
+    const status  = (data.status || 'UNKNOWN').toUpperCase();
+    const isOk    = status === 'SUCCESS';
+    const cls     = isOk ? 'success' : 'failed';
+    const detailsHtml = data.details
+      ? `<div class="result-details">${escapeHtml(data.details)}</div>` : '';
+    const shotHtml = data.screenshotPath ? `
+      <div class="result-screenshot">
+        <img src="${escapeHtml(data.screenshotPath)}" alt="Screenshot" loading="lazy"/>
+        <div class="screenshot-label">📸 ${escapeHtml(data.screenshotPath)}</div>
+      </div>` : '';
+
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = `
+      <div class="msg-meta"><div class="avatar bot-av">AI</div><span>${now()}</span></div>
+      <div class="bubble bot-bubble">
+        <div class="result-card">
+          <div class="result-header ${cls}">
+            <div class="result-status-dot"></div>${status} &middot; HRMS ENGINE
+          </div>
+          <div class="result-body">
+            <div class="result-message">${escapeHtml(data.message || 'No message.')}</div>
+            ${detailsHtml}${shotHtml}
+          </div>
+        </div>
+      </div>`;
+    chatArea.insertBefore(row, typingInd);
+    scrollBottom();
+  }
+
+  function appendAiResponse(text) {
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = `
+      <div class="msg-meta"><div class="avatar bot-av">AI</div><span>${now()}</span></div>
+      <div class="bubble bot-bubble">
+        <div class="ai-source-tag">✦ Claude AI</div>
+        <div class="ai-response">${escapeHtml(text)}</div>
+      </div>`;
+    chatArea.insertBefore(row, typingInd);
+    scrollBottom();
+  }
+
+  function appendWorkingOnIt(command) {
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = `
+      <div class="msg-meta"><div class="avatar bot-av">AI</div><span>${now()}</span></div>
+      <div class="bubble bot-bubble">
+        <div class="wip-card">
+          <div class="wip-header"><div class="wip-dot"></div> COMING SOON</div>
+          <div class="wip-body">
+            We're working on automating <strong>"${escapeHtml(command)}"</strong>.<br/>
+            This feature will be available in an upcoming release. Stay tuned!
+          </div>
+        </div>
+      </div>`;
+    chatArea.insertBefore(row, typingInd);
+    scrollBottom();
+  }
+
+  function appendError(errText) {
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = `
+      <div class="msg-meta"><div class="avatar bot-av">AI</div><span>${now()}</span></div>
+      <div class="bubble bot-bubble">
+        <div class="result-card">
+          <div class="result-header failed"><div class="result-status-dot"></div>ERROR</div>
+          <div class="result-body"><div class="result-message">${escapeHtml(errText)}</div></div>
+        </div>
+      </div>`;
+    chatArea.insertBefore(row, typingInd);
+    scrollBottom();
+  }
+
+  /* ════════════════════════════════════════
+     HRMS API (mock or real)
+  ════════════════════════════════════════ */
+  async function callHrms(cmd) {
+    if (USE_HRMS_MOCK) {
+      await new Promise(r => setTimeout(r, 1400));
+      return {
+        status: 'SUCCESS',
+        message: 'Login to HRMS completed successfully. Dashboard is now loaded.',
+        details: 'URL: https://hrms.example.com/dashboard\nSession ID: d84f2c91\nPage load: 1.3s\nLogged in as: Current User',
+        screenshotPath: null
+      };
+    }
+    const resp = await fetch(`${HRMS_ENDPOINT}?command=${encodeURIComponent(cmd)}`, {
+      method: 'GET', headers: { 'Accept': 'application/json' }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.json();
+  }
+
+  /* ════════════════════════════════════════
+     CLAUDE AI API
+  ════════════════════════════════════════ */
+  async function callClaude(userMessage) {
+    const system = `You are an AI assistant embedded inside an HRMS automation testing system.
+Users type natural language commands related to HR tasks (apply leave, check attendance, submit timesheets, download payslips, etc.) or general questions about the system.
+When a user asks about an HRMS automation task, explain clearly what the automation would do — steps it would take, what data it would fill, what result to expect.
+Keep responses concise (under 150 words). Use plain text with line breaks only — no markdown symbols, no bullet dashes, no asterisks.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: userMessage }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`Claude API ${response.status}`);
+    const data = await response.json();
+    const text = data.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+      .trim();
+    if (!text) throw new Error('Empty AI response');
+    return text;
+  }
+
+  /* ════════════════════════════════════════
+     MAIN SEND HANDLER
+  ════════════════════════════════════════ */
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    appendUser(text);
+
+    if (isHrmsCommand(text)) {
+      /* ── Route 1: HRMS Engine ── */
+      showTyping('Executing');
+      try {
+        const data = await callHrms(text);
+        hideTyping();
+        appendHrmsResult(data);
+      } catch (err) {
+        hideTyping();
+        appendError(`HRMS engine unreachable.\n${err.message}`);
+      }
+
+    } else {
+      /* ── Route 2: Claude AI → fallback to "Working on it" ── */
+      showTyping('Thinking');
+      try {
+        const aiText = await callClaude(text);
+        hideTyping();
+        appendAiResponse(aiText);
+      } catch (_err) {
+        hideTyping();
+        appendWorkingOnIt(text);   /* Graceful fallback */
+      }
+    }
+
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }
+</script>
+</body>
+</html>

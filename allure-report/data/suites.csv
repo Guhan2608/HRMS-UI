@@ -1,0 +1,5 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","4509","loginTest","Login Suite","2026-04-11","passed","2026-04-11","Pages.Login.LoginTest","Login Test","Pages.Login.LoginTest","loginTest"
+"","5498","loginTest","Login Suite","2026-04-11","passed","2026-04-11","Pages.Login.LoginTest","Login Test","Pages.Login.LoginTest","loginTest"
+"","4291","loginTest","Login Suite","2026-04-11","passed","2026-04-11","Pages.Login.LoginTest","Login Test","Pages.Login.LoginTest","loginTest"
+"","5015","loginTest","Login Suite","2026-04-11","passed","2026-04-11","Pages.Login.LoginTest","Login Test","Pages.Login.LoginTest","loginTest"
